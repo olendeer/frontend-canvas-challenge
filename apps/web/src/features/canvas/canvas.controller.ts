@@ -37,7 +37,7 @@ export const createCanvasController = ({
   // Уход со страницы не должен тихо терять правку, сделанную за миг до этого: отложенное
   // уходит на сервер сразу, ошибку показывать уже некому.
   const dispose = () => {
-    queue.flush().catch(() => undefined);
+    queue.flushInBackground();
     queue.dispose();
   };
 

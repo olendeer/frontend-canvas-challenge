@@ -115,7 +115,7 @@ export const useCanvas = (spaceId: string) => {
 
   /** Повтор сохранения после сетевой ошибки: то же тело, тот же If-Match. */
   const retrySave = useCallback(() => {
-    controller.queue.flush().catch(() => undefined);
+    controller.queue.flushInBackground();
   }, [controller.queue]);
 
   return {

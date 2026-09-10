@@ -4,14 +4,14 @@ import { NodeProps } from '@xyflow/react';
 import { useState } from 'react';
 
 import { GenerationScenario } from 'domain/contracts';
-import { getCodeMessage, getErrorMessage } from 'domain/errors';
-import { getIsFailed, getIsProcessing } from 'domain/generation';
+import { getErrorMessage } from 'domain/errors';
+import { getIsProcessing } from 'domain/generation';
 import { CHAIN_ISSUE_MESSAGE, getChainIssue } from 'domain/graph';
 import { Button, Select, SelectOption, StatusBadge } from 'ui-kit';
 
 import { useCanvasActions, useCanvasStatus } from '../../canvas.context';
 import { GeneratorNode as GeneratorNodeModel } from '../../canvas.types';
-import { getGenerationStatusView } from '../../generation.status';
+import { getGenerationFailureMessage, getGenerationStatusView } from '../../generation.status';
 import { NodeFrame } from '../../node-frame';
 import styles from './generator-node.module.scss';
 
@@ -30,12 +30,9 @@ export const GeneratorNode = ({ data, id, selected }: NodeProps<GeneratorNodeMod
   const issue = getChainIssue(index, id);
   const isStarting = startingNodeId === id;
   const isRunning = isStarting || getIsProcessing(generation);
+  // Ошибка запуска важнее прошлого отказа: она про текущее действие пользователя.
   const error =
-    startErrorNodeId === id
-      ? getErrorMessage(startError)
-      : getIsFailed(generation)
-        ? getCodeMessage(generation?.failureCode ?? null)
-        : null;
+    startErrorNodeId === id ? getErrorMessage(startError) : getGenerationFailureMessage(generation);
 
   return (
     <NodeFrame

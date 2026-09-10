@@ -44,6 +44,14 @@ export class WriteQueue<TPayload> extends ObservableStore<WriteQueueState> {
     }
   };
 
+  /**
+   * Отправить отложенное, не дожидаясь ответа. Ошибка остаётся в состоянии очереди, и её
+   * показывает интерфейс, поэтому потребителям не нужен свой catch.
+   */
+  flushInBackground = (): void => {
+    this.flush().catch(() => undefined);
+  };
+
   /** Правок больше нет: черновик совпал с серверным состоянием. Снимает и блокировку. */
   reset = (): void => {
     this._clearTimer();
