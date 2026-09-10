@@ -3,3 +3,7 @@ node_modules/
 .data/
 package-lock.json
 docs/openapi.json
+apps/web/.next/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/next-env.d.ts
