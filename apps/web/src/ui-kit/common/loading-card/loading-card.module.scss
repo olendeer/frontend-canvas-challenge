@@ -1,0 +1,5 @@
+@use 'mixins' as *;
+
+.card {
+  @include loading-state;
+}

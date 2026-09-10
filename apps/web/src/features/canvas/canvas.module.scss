@@ -1,0 +1,39 @@
+@use 'mixins' as *;
+
+.page {
+  @include stack(var(--space-4));
+}
+
+.header {
+  @include row(var(--space-4));
+
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.aside {
+  @include row(var(--space-3));
+}
+
+.caption {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.heading {
+  font-size: var(--font-size-page-title);
+}
+
+.pane {
+  @include card-surface;
+
+  height: min(68vh, 720px);
+  min-height: 420px;
+  overflow: hidden;
+}
+
+.hint {
+  max-width: 90ch;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}

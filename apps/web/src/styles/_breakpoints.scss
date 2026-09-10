@@ -1,0 +1,9 @@
+// Канвас рассчитан на ширину от 1280 пикселей; переносы нужны только служебным экранам.
+$layout-narrow: 900px;
+$layout-mobile: 560px;
+
+@mixin below($width) {
+  @media (max-width: $width) {
+    @content;
+  }
+}

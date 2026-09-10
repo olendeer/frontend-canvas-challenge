@@ -1,0 +1,47 @@
+@use 'breakpoints' as *;
+@use 'mixins' as *;
+
+.page {
+  @include stack(var(--space-5));
+
+  max-width: 760px;
+}
+
+.heading {
+  font-size: var(--font-size-page-title);
+}
+
+.caption {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.form {
+  @include row(var(--space-3));
+
+  align-items: flex-end;
+
+  @include below($layout-mobile) {
+    @include stack(var(--space-3));
+
+    align-items: stretch;
+  }
+}
+
+.form > :first-child {
+  flex: 1;
+}
+
+.list {
+  @include stack(var(--space-3));
+}
+
+.item {
+  @include row(var(--space-4));
+
+  justify-content: space-between;
+}
+
+.title {
+  font-weight: 600;
+}

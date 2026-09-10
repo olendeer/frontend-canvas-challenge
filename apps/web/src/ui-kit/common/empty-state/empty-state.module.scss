@@ -1,0 +1,18 @@
+@use 'mixins' as *;
+
+.empty {
+  @include stack(var(--space-3));
+
+  align-items: flex-start;
+  padding: var(--space-5);
+  color: var(--color-text-muted);
+}
+
+.title {
+  color: var(--color-text);
+  font-size: var(--font-size-section-title);
+}
+
+.description {
+  max-width: 52ch;
+}

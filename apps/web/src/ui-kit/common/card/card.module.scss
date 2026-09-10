@@ -1,0 +1,8 @@
+@use 'mixins' as *;
+
+.card {
+  @include card-surface;
+
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
