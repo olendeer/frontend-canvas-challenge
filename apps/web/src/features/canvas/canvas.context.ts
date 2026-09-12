@@ -3,8 +3,8 @@
 import { createContext, useContext } from 'react';
 
 import { GenerationScenario } from 'domain/contracts';
-import { GenerationIndex } from 'domain/generation';
-import { GraphIndex } from 'domain/graph';
+import { GenerationsEntity } from 'domain/generation';
+import { ChainIssue } from 'domain/graph';
 
 /** Действия нод. Ссылки стабильны, поэтому изменение состояния их не пересоздаёт. */
 export interface CanvasActions {
@@ -14,12 +14,14 @@ export interface CanvasActions {
 }
 
 /**
- * Состояние, которое нужно нодам: индекс графа и индекс генераций. Отделено от действий,
- * чтобы перетаскивание нод (оно не меняет ни то, ни другое) не перерисовывало ноды.
+ * Состояние, которое нужно нодам. Сам граф сюда не попадает: он меняется на каждом кадре
+ * перетаскивания, а нодам важна только структура. Поэтому здесь стабильная функция, которая
+ * всегда читает свежий граф из хранилища, а ссылка на весь объект меняется только тогда,
+ * когда меняется структура графа или состояние генераций.
  */
 export interface CanvasStatus {
-  generations: GenerationIndex;
-  index: GraphIndex;
+  chainIssueFor: (generatorId: string) => ChainIssue | null;
+  generations: GenerationsEntity;
   /** Ошибка последнего запуска и нода, к которой она относится. */
   startError: unknown;
   startErrorNodeId: string | null;

@@ -26,9 +26,3 @@ export type GraphNodeData<TKind extends GraphNodeKind> = Extract<
 >['data'];
 export type Space = SpaceData;
 export type Viewport = Graph['viewport'];
-
-/** Граф вместе с версией представления: ETag выдаётся только для него. */
-export interface GraphSnapshot {
-  etag: string;
-  graph: Graph;
-}

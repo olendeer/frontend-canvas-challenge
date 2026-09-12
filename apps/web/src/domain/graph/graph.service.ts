@@ -1,5 +1,7 @@
 import { RequestConfig } from 'core/http';
-import { Graph, GraphSnapshot } from 'domain/contracts';
+import { Graph } from 'domain/contracts';
+
+import { GraphSnapshot } from './entities';
 
 export interface GraphService {
   /** ETag последнего прочитанного или сохранённого графа: нужен запуску генерации. */

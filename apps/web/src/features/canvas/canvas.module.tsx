@@ -12,7 +12,6 @@ import {
 import { useCallback, useRef } from 'react';
 
 import { GraphNodeKind } from 'domain/contracts';
-import { getIsValidConnection } from 'domain/graph';
 import { ErrorAlert } from 'features/error-alert';
 import { useSpaceQuery } from 'query';
 import { Alert, Button, LinkButton, LoadingCard } from 'ui-kit';
@@ -40,11 +39,11 @@ const CanvasBoard = ({ spaceId }: CanvasModuleProps) => {
     actions,
     config,
     generationsQuery,
+    graph,
     graphQuery,
     isReady,
     reloadGraph,
     retrySave,
-    snapshot,
     status,
     store,
     writeState,
@@ -66,10 +65,12 @@ const CanvasBoard = ({ spaceId }: CanvasModuleProps) => {
     [screenToFlowPosition, store],
   );
 
+  // Читает граф из хранилища, поэтому ссылка стабильна: React Flow зовёт эту проверку
+  // на каждом кадре перетаскивания связи.
   const isValidConnection = useCallback(
     (connection: Connection | Edge) =>
-      getIsValidConnection(snapshot.index, connection.source, connection.target),
-    [snapshot.index],
+      store.getSnapshot().canConnect(connection.source, connection.target),
+    [store],
   );
 
   if (space.isError || graphQuery.isError) {
@@ -129,30 +130,26 @@ const CanvasBoard = ({ spaceId }: CanvasModuleProps) => {
         />
       ) : null}
 
-      {snapshot.nodes.length === 0 ? (
+      {graph.nodes.length === 0 ? (
         <Alert title="Канвас пуст" tone="info">
           Добавьте текстовую ноду, генератор и результат, затем соедините их порты.
         </Alert>
       ) : null}
 
-      <CanvasToolbar
-        maxNodes={config.maxNodes}
-        nodeCount={snapshot.nodes.length}
-        onAddNode={onAddNode}
-      />
+      <CanvasToolbar config={config} graph={graph} onAddNode={onAddNode} />
 
       <div className={styles.pane} data-testid="canvas" ref={paneRef}>
         <CanvasActionsContext.Provider value={actions}>
           <CanvasStatusContext.Provider value={status}>
             <ReactFlow
-              defaultViewport={snapshot.viewport}
+              defaultViewport={graph.viewport}
               deleteKeyCode={DELETE_KEYS}
-              edges={snapshot.edges}
+              edges={graph.edges}
               isValidConnection={isValidConnection}
               maxZoom={MAX_ZOOM}
               minZoom={MIN_ZOOM}
               nodeTypes={nodeTypes}
-              nodes={snapshot.nodes}
+              nodes={graph.nodes}
               onConnect={store.connect}
               onEdgesChange={store.applyEdgeChanges}
               onMoveEnd={(_event, viewport) => store.setViewport(viewport)}

@@ -9,9 +9,9 @@ import {
 } from '@tanstack/react-query';
 
 import { StartedGeneration } from 'data/repositories';
-import { ResolvedConfig } from 'domain/config';
-import { Generation, GenerationScenario } from 'domain/contracts';
-import { getPollDelayMs } from 'domain/generation';
+import { ConfigEntity } from 'domain/config';
+import { GenerationScenario } from 'domain/contracts';
+import { GenerationsEntity } from 'domain/generation';
 import { useGenerationService } from 'providers/services.hooks';
 
 import { queryKeys } from '../query-keys';
@@ -29,15 +29,15 @@ export interface StartGenerationInput {
  */
 export const useGenerationsQuery = (
   spaceId: string,
-  config: ResolvedConfig,
+  config: ConfigEntity,
   retryAfterMs: number | null,
-): UseQueryResult<Generation[]> => {
+): UseQueryResult<GenerationsEntity> => {
   const generation = useGenerationService();
 
   return useQuery({
     queryFn: ({ signal }) => generation.getGenerations(spaceId, { signal }),
     queryKey: queryKeys.generations(spaceId),
-    refetchInterval: ({ state }) => getPollDelayMs(state.data, config, retryAfterMs),
+    refetchInterval: ({ state }) => state.data?.pollDelayMs(config, retryAfterMs) ?? false,
     staleTime: 0,
   });
 };

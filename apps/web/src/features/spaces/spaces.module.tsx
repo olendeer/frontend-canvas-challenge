@@ -11,8 +11,6 @@ import styles from './spaces.module.scss';
 
 const MAX_TITLE_LENGTH = 80;
 
-const dateFormat = new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium', timeStyle: 'short' });
-
 export const SpacesModule = () => {
   const router = useRouter();
   const spaces = useSpacesQuery();
@@ -84,7 +82,7 @@ export const SpacesModule = () => {
                   dateTime={space.createdAt}
                   suppressHydrationWarning
                 >
-                  {dateFormat.format(new Date(space.createdAt))}
+                  {space.createdAtLabel}
                 </time>
               </div>
               <LinkButton href={`/spaces/${space.id}`} size="sm" variant="secondary">

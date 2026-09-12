@@ -1,9 +1,10 @@
 import { RequestConfig } from 'core/http';
 import { IdempotencyJournal } from 'core/idempotency';
 import { GenerationsRepo, StartedGeneration } from 'data/repositories';
-import { Generation, GenerationScenario } from 'domain/contracts';
+import { GenerationScenario } from 'domain/contracts';
 import { GraphService } from 'domain/graph';
 
+import { GenerationsEntity } from './entities';
 import { GenerationService } from './generation.service';
 
 export class GenerationServiceImpl implements GenerationService {
@@ -13,7 +14,7 @@ export class GenerationServiceImpl implements GenerationService {
     private readonly _journal: IdempotencyJournal,
   ) {}
 
-  getGenerations = (spaceId: string, config?: RequestConfig): Promise<Generation[]> =>
+  getGenerations = (spaceId: string, config?: RequestConfig): Promise<GenerationsEntity> =>
     this._repo.getGenerations(spaceId, config);
 
   /**

@@ -7,49 +7,30 @@ import {
 } from '@xyflow/react';
 
 import { ObservableStore } from 'core/store';
-import { CONFIG_DEFAULTS, ResolvedConfig } from 'domain/config';
+import { ConfigEntity } from 'domain/config';
 import { Graph, GraphNodeKind, Viewport } from 'domain/contracts';
-import {
-  buildGraphIndex,
-  createGraphNode,
-  dropEdgesTouching,
-  EMPTY_GRAPH,
-  getIsLimitReached,
-  getIsValidConnection,
-  getNextNodePosition,
-  GraphIndex,
-  toGraphPayload,
-  withNodeData,
-} from 'domain/graph';
+import { GraphEntity } from 'domain/graph';
 
 import { CanvasEdge, CanvasNode } from './canvas.types';
 
-export interface CanvasSnapshot {
-  edges: CanvasEdge[];
-  index: GraphIndex;
-  nodes: CanvasNode[];
-  viewport: Viewport;
-}
+/** Граф канваса: та же сущность, но с нодами и связями в форме React Flow. */
+export type CanvasGraph = GraphEntity<CanvasNode, CanvasEdge>;
 
 /**
- * Локальный черновик графа — единственный источник правды для редактирования.
+ * Локальный черновик графа — единственный источник правды для редактирования. Снимок хранилища
+ * и есть сущность графа: все правила живут в ней, а стор отвечает только за то, какое событие
+ * канваса во что превращается и когда запускать сохранение.
  *
- * Снимок заменяется целиком, но неизменившиеся части сохраняют ссылки: перетаскивание ноды
- * не пересобирает индекс и не пересоздаёт массив связей, а выделение ноды вообще не считается
- * правкой и не запускает сохранение. Индекс пересобирается только при изменении структуры или
- * данных нод и хранит одни примитивы, поэтому не может разойтись с координатами.
+ * Выделение ноды и замер её размеров правкой не считаются: они меняют снимок, но не поднимают
+ * PUT. Перетаскивание правкой считается, но структуру не меняет, поэтому индекс графа
+ * переезжает в новый снимок как есть.
  */
-export class CanvasStore extends ObservableStore<CanvasSnapshot> {
-  private _config: ResolvedConfig = CONFIG_DEFAULTS;
+export class CanvasStore extends ObservableStore<CanvasGraph> {
+  private _config = ConfigEntity.defaults();
   private _onChange: () => void = () => {};
 
   constructor() {
-    super({
-      edges: [],
-      index: buildGraphIndex([], []),
-      nodes: [],
-      viewport: EMPTY_GRAPH.viewport,
-    });
+    super(GraphEntity.empty() as CanvasGraph);
   }
 
   /** Правка черновика: сюда подключается очередь записи. */
@@ -57,69 +38,59 @@ export class CanvasStore extends ObservableStore<CanvasSnapshot> {
     this._onChange = onChange;
   };
 
-  setConfig = (config: ResolvedConfig): void => {
+  setConfig = (config: ConfigEntity): void => {
     this._config = config;
   };
 
   /** Состояние сервера. Правкой не считается: сохранять нечего. */
-  replace = (graph: Graph): void => {
+  replace = (graph: GraphEntity): void => {
+    // Копии объектов: ноды канваса не должны делить ссылки с кэшем запросов.
     const nodes = graph.nodes.map((node) => ({ ...node })) as CanvasNode[];
     const edges: CanvasEdge[] = graph.edges.map((edge) => ({ ...edge }));
 
-    this._set({ edges, index: buildGraphIndex(nodes, edges), nodes, viewport: graph.viewport });
+    this._set(new GraphEntity(nodes, edges, graph.viewport));
   };
 
   /** origin — левый верхний угол видимой области канваса в координатах графа. */
   addNode = (kind: GraphNodeKind, origin: { x: number; y: number }): void => {
-    const { edges, nodes, viewport } = this.getSnapshot();
+    const graph = this.getSnapshot();
 
-    if (getIsLimitReached(nodes.length, this._config.maxNodes)) {
+    if (graph.isNodeLimitReached(this._config.maxNodes)) {
       return;
     }
 
-    const node = createGraphNode(kind, getNextNodePosition(kind, nodes, origin)) as CanvasNode;
-
-    this._commit([...nodes, node], edges, viewport, true);
+    this._commit(graph.withNewNode(kind, origin));
   };
 
   removeNodes = (ids: readonly string[]): void => {
-    const { edges, nodes, viewport } = this.getSnapshot();
-    const removed = new Set(ids);
-    const rest = nodes.filter((node) => !removed.has(node.id));
+    const graph = this.getSnapshot();
+    const next = graph.withoutNodes(new Set(ids));
 
-    if (rest.length === nodes.length) {
-      return;
+    if (next !== graph) {
+      this._commit(next);
     }
-
-    this._commit(rest, dropEdgesTouching(edges, removed), viewport, true);
   };
 
   connect = (connection: Connection): void => {
-    const { edges, index, nodes, viewport } = this.getSnapshot();
+    const graph = this.getSnapshot();
 
     if (
-      getIsLimitReached(edges.length, this._config.maxEdges) ||
-      !getIsValidConnection(index, connection.source, connection.target)
+      graph.isEdgeLimitReached(this._config.maxEdges) ||
+      !graph.canConnect(connection.source, connection.target)
     ) {
       return;
     }
 
-    const edge: CanvasEdge = {
-      id: crypto.randomUUID(),
-      source: connection.source,
-      target: connection.target,
-    };
-
-    this._commit(nodes, [...edges, edge], viewport, true);
+    this._commit(graph.withNewEdge(connection.source, connection.target));
   };
 
   /**
-   * Изменения React Flow: один проход решает, нужно ли сохранение и переиндексация.
+   * Изменения React Flow: один проход решает, нужно ли сохранение и пересборка индекса.
    * position меняет постоянные данные, но не структуру; select и dimensions не меняют ничего,
    * что уходит на сервер, поэтому не поднимают лишний PUT.
    */
   applyNodeChanges = (changes: NodeChange<CanvasNode>[]): void => {
-    const { edges, nodes, viewport } = this.getSnapshot();
+    const graph = this.getSnapshot();
     let isPersisted = false;
     let isStructural = false;
     let removed: Set<string> | null = null;
@@ -144,17 +115,16 @@ export class CanvasStore extends ObservableStore<CanvasSnapshot> {
       }
     }
 
+    const nodes = applyNodeChanges(changes, graph.nodes);
+
     this._commit(
-      applyNodeChanges(changes, nodes),
-      removed === null ? edges : dropEdgesTouching(edges, removed),
-      viewport,
-      isStructural,
+      isStructural ? graph.withNodes(nodes, removed ?? undefined) : graph.withMovedNodes(nodes),
       isPersisted,
     );
   };
 
   applyEdgeChanges = (changes: EdgeChange<CanvasEdge>[]): void => {
-    const { edges, nodes, viewport } = this.getSnapshot();
+    const graph = this.getSnapshot();
     let isPersisted = false;
 
     for (let index = 0; index < changes.length; index += 1) {
@@ -165,43 +135,22 @@ export class CanvasStore extends ObservableStore<CanvasSnapshot> {
       }
     }
 
-    this._commit(nodes, applyEdgeChanges(changes, edges), viewport, isPersisted, isPersisted);
+    this._commit(graph.withEdges(applyEdgeChanges(changes, graph.edges)), isPersisted);
   };
 
   setPromptText = (id: string, text: string): void => {
-    const { edges, nodes, viewport } = this.getSnapshot();
-
-    this._commit(withNodeData(nodes, id, { text }), edges, viewport, true);
+    this._commit(this.getSnapshot().withNodeData(id, { text }));
   };
 
   setViewport = (viewport: Viewport): void => {
-    const { edges, nodes } = this.getSnapshot();
-
-    this._commit(nodes, edges, viewport, false);
+    this._commit(this.getSnapshot().withViewport(viewport));
   };
 
   /** Тело PUT читается очередью записи в момент отправки. */
-  toPayload = (): Graph => {
-    const { edges, nodes, viewport } = this.getSnapshot();
+  toPayload = (): Graph => this.getSnapshot().toPayload();
 
-    return toGraphPayload(nodes, edges, viewport);
-  };
-
-  private _commit = (
-    nodes: CanvasNode[],
-    edges: CanvasEdge[],
-    viewport: Viewport,
-    isStructural: boolean,
-    isPersisted = true,
-  ): void => {
-    const previous = this.getSnapshot();
-
-    this._set({
-      edges,
-      index: isStructural ? buildGraphIndex(nodes, edges) : previous.index,
-      nodes,
-      viewport,
-    });
+  private _commit = (graph: CanvasGraph, isPersisted = true): void => {
+    this._set(graph);
 
     if (isPersisted) {
       this._onChange();

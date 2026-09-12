@@ -2,7 +2,7 @@
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 
-import { GraphSnapshot } from 'domain/contracts';
+import { GraphSnapshot } from 'domain/graph';
 import { useGraphService } from 'providers/services.hooks';
 
 import { queryKeys } from '../query-keys';

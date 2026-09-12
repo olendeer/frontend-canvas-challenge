@@ -1,6 +1,6 @@
 import { RequestConfig } from 'core/http';
-import { AppConfig } from 'domain/contracts';
+import { ConfigEntity } from 'domain/config';
 
 export interface ConfigRepo {
-  getConfig: (config?: RequestConfig) => Promise<AppConfig>;
+  getConfig: (config?: RequestConfig) => Promise<ConfigEntity>;
 }

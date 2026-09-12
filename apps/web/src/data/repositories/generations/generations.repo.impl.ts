@@ -2,6 +2,7 @@ import { HttpClient, RequestConfig } from 'core/http';
 import { GenerationDto } from 'data/dto/generation';
 import { API } from 'data/endpoints';
 import { Generation } from 'domain/contracts';
+import { GenerationsEntity } from 'domain/generation';
 
 import { GenerationsRepo, StartedGeneration } from './generations.repo';
 import { CreateGenerationPayload } from './generations.repo.payload';
@@ -9,7 +10,7 @@ import { CreateGenerationPayload } from './generations.repo.payload';
 export class GenerationsRepoImpl implements GenerationsRepo {
   constructor(private readonly _http: HttpClient) {}
 
-  getGenerations = async (spaceId: string, config?: RequestConfig): Promise<Generation[]> => {
+  getGenerations = async (spaceId: string, config?: RequestConfig): Promise<GenerationsEntity> => {
     const response = await this._http.get<Generation[]>(
       API.spaces.generations.toUrl({ spaceId }),
       config,

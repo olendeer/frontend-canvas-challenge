@@ -1,6 +1,8 @@
 import { RequestConfig } from 'core/http';
 import { GraphRepo } from 'data/repositories';
-import { Graph, GraphSnapshot } from 'domain/contracts';
+import { Graph } from 'domain/contracts';
+
+import { GraphSnapshot } from './entities';
 
 import { GraphService } from './graph.service';
 

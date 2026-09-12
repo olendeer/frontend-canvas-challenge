@@ -5,13 +5,12 @@ import { useState } from 'react';
 
 import { GenerationScenario } from 'domain/contracts';
 import { getErrorMessage } from 'domain/errors';
-import { getIsProcessing } from 'domain/generation';
-import { CHAIN_ISSUE_MESSAGE, getChainIssue } from 'domain/graph';
+import { CHAIN_ISSUE_MESSAGE } from 'domain/graph';
 import { Button, Select, SelectOption, StatusBadge } from 'ui-kit';
 
 import { useCanvasActions, useCanvasStatus } from '../../canvas.context';
 import { GeneratorNode as GeneratorNodeModel } from '../../canvas.types';
-import { getGenerationFailureMessage, getGenerationStatusView } from '../../generation.status';
+import { getGenerationStatusView } from '../../generation.status';
 import { NodeFrame } from '../../node-frame';
 import styles from './generator-node.module.scss';
 
@@ -22,17 +21,17 @@ const SCENARIO_OPTIONS: readonly SelectOption[] = [
 
 export const GeneratorNode = ({ data, id, selected }: NodeProps<GeneratorNodeModel>) => {
   const { onStartGeneration } = useCanvasActions();
-  const { generations, index, startError, startErrorNodeId, startingNodeId } = useCanvasStatus();
+  const { chainIssueFor, generations, startError, startErrorNodeId, startingNodeId } =
+    useCanvasStatus();
   const [scenario, setScenario] = useState<GenerationScenario>('success');
 
-  const generation = generations.byNode.get(id);
+  const generation = generations.forNode(id);
   const status = getGenerationStatusView(generation);
-  const issue = getChainIssue(index, id);
-  const isStarting = startingNodeId === id;
-  const isRunning = isStarting || getIsProcessing(generation);
+  const issue = chainIssueFor(id);
+  const isRunning = startingNodeId === id || Boolean(generation?.isProcessing);
   // Ошибка запуска важнее прошлого отказа: она про текущее действие пользователя.
   const error =
-    startErrorNodeId === id ? getErrorMessage(startError) : getGenerationFailureMessage(generation);
+    startErrorNodeId === id ? getErrorMessage(startError) : (generation?.failureMessage ?? null);
 
   return (
     <NodeFrame

@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { resolveConfig } from 'domain/config';
+import { ConfigEntity } from 'domain/config';
 import { GenerationScenario } from 'domain/contracts';
-import { buildGenerationIndex, EMPTY_GENERATION_INDEX } from 'domain/generation';
+import { GenerationsEntity } from 'domain/generation';
 import { useStore } from 'hooks';
 import { useGraphService } from 'providers/services.hooks';
 import {
@@ -20,7 +20,7 @@ import { createCanvasController } from './canvas.controller';
 export const useCanvas = (spaceId: string) => {
   const graphService = useGraphService();
   const configQuery = useConfigQuery();
-  const config = resolveConfig(configQuery.data);
+  const config = ConfigEntity.resolve(configQuery.data);
   const configRef = useRef(config);
 
   const [controller] = useState(() =>
@@ -32,9 +32,10 @@ export const useCanvas = (spaceId: string) => {
     }),
   );
 
+  const { store } = controller;
   const graphQuery = useGraphQuery(spaceId);
   const { refetch: refetchGraph } = graphQuery;
-  const snapshot = useStore(controller.store);
+  const graph = useStore(store);
   const writeState = useStore(controller.queue);
 
   const startGeneration = useStartGenerationMutation(spaceId, controller.queue.flush);
@@ -47,16 +48,12 @@ export const useCanvas = (spaceId: string) => {
   const startedNodeId = startGeneration.variables?.nodeId ?? null;
 
   const generationsQuery = useGenerationsQuery(spaceId, config, started?.retryAfterMs ?? null);
-  const generations = useMemo(
-    () =>
-      generationsQuery.data ? buildGenerationIndex(generationsQuery.data) : EMPTY_GENERATION_INDEX,
-    [generationsQuery.data],
-  );
+  const generations = generationsQuery.data ?? GenerationsEntity.empty();
 
   useEffect(() => {
     configRef.current = config;
-    controller.store.setConfig(config);
-  }, [config, controller.store]);
+    store.setConfig(config);
+  }, [config, store]);
 
   // Серверный граф попадает в черновик один раз при открытии пространства; дальше правит
   // только пользователь, а перечитывание идёт по явной кнопке в reloadGraph. Канвас
@@ -70,9 +67,9 @@ export const useCanvas = (spaceId: string) => {
     }
 
     isSeededRef.current = true;
-    controller.store.replace(graphQuery.data.graph);
+    store.replace(graphQuery.data.graph);
     setIsReady(true);
-  }, [controller.store, graphQuery.data]);
+  }, [graphQuery.data, store]);
 
   useEffect(() => controller.dispose, [controller]);
 
@@ -81,25 +78,24 @@ export const useCanvas = (spaceId: string) => {
     [start],
   );
 
-  const onRemoveNode = useCallback(
-    (id: string) => controller.store.removeNodes([id]),
-    [controller.store],
-  );
+  const onRemoveNode = useCallback((id: string) => store.removeNodes([id]), [store]);
 
   const actions = useMemo<CanvasActions>(
-    () => ({ onRemoveNode, onStartGeneration, onTextChange: controller.store.setPromptText }),
-    [controller.store.setPromptText, onRemoveNode, onStartGeneration],
+    () => ({ onRemoveNode, onStartGeneration, onTextChange: store.setPromptText }),
+    [onRemoveNode, onStartGeneration, store.setPromptText],
   );
 
   const status = useMemo<CanvasStatus>(
     () => ({
+      chainIssueFor: (generatorId: string) => store.getSnapshot().chainIssueFor(generatorId),
       generations,
-      index: snapshot.index,
       startError,
       startErrorNodeId: startError ? startedNodeId : null,
       startingNodeId: isStarting ? startedNodeId : null,
     }),
-    [generations, isStarting, snapshot.index, startedNodeId, startError],
+    // graph.structure меняется только вместе со структурой и данными нод, поэтому
+    // перетаскивание не пересоздаёт контекст и не перерисовывает ноды.
+    [generations, graph.structure, isStarting, startedNodeId, startError, store],
   );
 
   /** Явное перечитывание серверного графа после конфликта версий. */
@@ -107,11 +103,11 @@ export const useCanvas = (spaceId: string) => {
     const result = await refetchGraph();
 
     if (result.data) {
-      controller.store.replace(result.data.graph);
+      store.replace(result.data.graph);
     }
 
     controller.queue.reset();
-  }, [controller, refetchGraph]);
+  }, [controller.queue, refetchGraph, store]);
 
   /** Повтор сохранения после сетевой ошибки: то же тело, тот же If-Match. */
   const retrySave = useCallback(() => {
@@ -121,14 +117,15 @@ export const useCanvas = (spaceId: string) => {
   return {
     actions,
     config,
+    generations,
     generationsQuery,
+    graph,
     graphQuery,
     isReady,
     reloadGraph,
     retrySave,
-    snapshot,
     status,
-    store: controller.store,
+    store,
     writeState,
   };
 };

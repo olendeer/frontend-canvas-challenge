@@ -1,9 +1,11 @@
 import { RequestConfig } from 'core/http';
 import { StartedGeneration } from 'data/repositories';
-import { Generation, GenerationScenario } from 'domain/contracts';
+import { GenerationScenario } from 'domain/contracts';
+
+import { GenerationsEntity } from './entities';
 
 export interface GenerationService {
-  getGenerations: (spaceId: string, config?: RequestConfig) => Promise<Generation[]>;
+  getGenerations: (spaceId: string, config?: RequestConfig) => Promise<GenerationsEntity>;
   start: (
     spaceId: string,
     nodeId: string,

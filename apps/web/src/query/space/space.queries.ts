@@ -8,12 +8,12 @@ import {
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import { Space } from 'domain/contracts';
+import { SpaceEntity } from 'domain/space';
 import { useSpacesRepo } from 'providers/services.hooks';
 
 import { queryKeys } from '../query-keys';
 
-export const useSpacesQuery = (): UseQueryResult<Space[]> => {
+export const useSpacesQuery = (): UseQueryResult<SpaceEntity[]> => {
   const spaces = useSpacesRepo();
 
   return useQuery({
@@ -22,7 +22,7 @@ export const useSpacesQuery = (): UseQueryResult<Space[]> => {
   });
 };
 
-export const useSpaceQuery = (spaceId: string): UseQueryResult<Space> => {
+export const useSpaceQuery = (spaceId: string): UseQueryResult<SpaceEntity> => {
   const spaces = useSpacesRepo();
 
   return useQuery({
@@ -32,7 +32,7 @@ export const useSpaceQuery = (spaceId: string): UseQueryResult<Space> => {
   });
 };
 
-export const useCreateSpaceMutation = (): UseMutationResult<Space, Error, string> => {
+export const useCreateSpaceMutation = (): UseMutationResult<SpaceEntity, Error, string> => {
   const spaces = useSpacesRepo();
   const queryClient = useQueryClient();
 

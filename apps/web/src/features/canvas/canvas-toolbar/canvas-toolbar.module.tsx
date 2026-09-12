@@ -1,14 +1,15 @@
 'use client';
 
+import { ConfigEntity } from 'domain/config';
 import { GraphNodeKind } from 'domain/contracts';
-import { getIsLimitReached } from 'domain/graph';
 import { Button } from 'ui-kit';
 
+import { CanvasGraph } from '../canvas.store';
 import styles from './canvas-toolbar.module.scss';
 
 interface CanvasToolbarProps {
-  maxNodes: number;
-  nodeCount: number;
+  config: ConfigEntity;
+  graph: CanvasGraph;
   onAddNode: (kind: GraphNodeKind) => void;
 }
 
@@ -18,8 +19,8 @@ const NODE_BUTTONS: readonly { kind: GraphNodeKind; label: string }[] = [
   { kind: 'result', label: 'Добавить результат' },
 ];
 
-export const CanvasToolbar = ({ maxNodes, nodeCount, onAddNode }: CanvasToolbarProps) => {
-  const isFull = getIsLimitReached(nodeCount, maxNodes);
+export const CanvasToolbar = ({ config, graph, onAddNode }: CanvasToolbarProps) => {
+  const isFull = graph.isNodeLimitReached(config.maxNodes);
 
   return (
     <div className={styles.toolbar}>
@@ -37,7 +38,7 @@ export const CanvasToolbar = ({ maxNodes, nodeCount, onAddNode }: CanvasToolbarP
         ))}
       </div>
       <p className={styles.counter}>
-        Нод: {nodeCount} из {maxNodes}
+        Нод: {graph.nodes.length} из {config.maxNodes}
         {isFull ? '. Лимит достигнут.' : ''}
       </p>
     </div>

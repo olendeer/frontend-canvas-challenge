@@ -1,6 +1,8 @@
 import { HttpClient, RequestConfig } from 'core/http';
+import { GraphDto } from 'data/dto/graph';
 import { API } from 'data/endpoints';
-import { Graph, GraphSnapshot } from 'domain/contracts';
+import { Graph } from 'domain/contracts';
+import { GraphSnapshot } from 'domain/graph/entities';
 
 import { GraphRepo } from './graph.repo';
 
@@ -10,7 +12,7 @@ export class GraphRepoImpl implements GraphRepo {
   getGraph = async (spaceId: string, config?: RequestConfig): Promise<GraphSnapshot> => {
     const response = await this._http.get<Graph>(API.spaces.graph.toUrl({ spaceId }), config);
 
-    return { etag: response.etag ?? '', graph: response.data };
+    return { etag: response.etag ?? '', graph: GraphDto.mapToEntity(response.data) };
   };
 
   saveGraph = async (
@@ -25,6 +27,6 @@ export class GraphRepoImpl implements GraphRepo {
       { ...config, ifMatch },
     );
 
-    return { etag: response.etag ?? '', graph: response.data };
+    return { etag: response.etag ?? '', graph: GraphDto.mapToEntity(response.data) };
   };
 }

@@ -1,11 +1,11 @@
 import { RequestConfig } from 'core/http';
-import { Generation } from 'domain/contracts';
+import { GenerationEntity, GenerationsEntity } from 'domain/generation';
 
 import { CreateGenerationPayload } from './generations.repo.payload';
 
 /** Результат запуска: сервер отвечает 202 и рекомендует паузу до первого опроса. */
 export interface StartedGeneration {
-  generation: Generation;
+  generation: GenerationEntity;
   retryAfterMs: number | null;
 }
 
@@ -16,5 +16,5 @@ export interface GenerationsRepo {
     idempotencyKey: string,
     config?: RequestConfig,
   ) => Promise<StartedGeneration>;
-  getGenerations: (spaceId: string, config?: RequestConfig) => Promise<Generation[]>;
+  getGenerations: (spaceId: string, config?: RequestConfig) => Promise<GenerationsEntity>;
 }
